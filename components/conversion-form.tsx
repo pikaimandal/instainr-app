@@ -2,8 +2,9 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { MiniKit, ResponseEvent, Tokens, tokenToDecimals } from "@worldcoin/minikit-js"
 
 interface ConversionFormProps {
   selectedToken: "WLD" | "USDC.e" | "ETH"
@@ -41,6 +42,16 @@ export default function ConversionForm({
   minimumAmount,
 }: ConversionFormProps) {
   const [error, setError] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [paymentId, setPaymentId] = useState<string | null>(null)
+
+  // Setup payment response handler
+  useEffect(() => {
+    if (!MiniKit.isInstalled()) return
+    
+    // Using commandsAsync in the submit handler instead of event listeners
+    
+  }, [])
 
   const handleAmountChange = (value: string) => {
     // Only allow numbers and decimals
@@ -56,7 +67,7 @@ export default function ConversionForm({
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!amount || Number.parseFloat(amount) <= 0) {
@@ -74,8 +85,94 @@ export default function ConversionForm({
       setError(`Minimum conversion amount is ₹${minimumAmount}`)
       return
     }
+    
+    if (!MiniKit.isInstalled()) {
+      setError("World App is required for payments")
+      return
+    }
+    
+    setIsProcessing(true)
+    
+    try {
+      // Initiate payment in the backend
+      const response = await fetch('/api/initiate-pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: selectedToken,
+          amount: amount
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (!data.id) {
+        throw new Error('Failed to initiate payment')
+      }
+      
+      setPaymentId(data.id)
+      
+      // Map our tokens to Minikit token symbols
+      const tokenMapping: Record<string, Tokens> = {
+        "WLD": Tokens.WLD,
+        "USDC.e": Tokens.USDCE,
+        // ETH not directly supported, fallback to handling it separately
+      }
+      
+      // Initiate the payment using async API
+      try {
+        // Only allow WLD and USDC.e for now (ETH would need custom handling)
+        if (selectedToken === 'ETH') {
+          throw new Error('ETH payments are not supported yet')
+        }
 
-    onSubmit()
+        const { finalPayload } = await MiniKit.commandsAsync.pay({
+          reference: data.id,
+          to: process.env.RECIPIENT_WALLET_ADDRESS || "0x65D39a9255AD880F6f793cf15bbe2c147F54D4FB", // Use environment variable with fallback
+          tokens: [
+            {
+              symbol: tokenMapping[selectedToken],
+              token_amount: tokenToDecimals(parseFloat(amount), tokenMapping[selectedToken]).toString()
+            }
+          ],
+          description: `Convert ${amount} ${selectedToken} to INR`
+        })
+        
+        if (finalPayload.status === 'success') {
+          // Verify the payment with our backend
+          const verifyResponse = await fetch('/api/verify-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: data.id,
+              status: 'completed',
+              txHash: finalPayload.transaction_id
+            })
+          })
+          
+          const verifyData = await verifyResponse.json()
+          
+          if (verifyData.success) {
+            // Continue to the next step
+            onSubmit()
+          } else {
+            setError('Failed to verify payment. Please contact support.')
+          }
+        } else {
+          setError('Payment failed. Please try again.')
+        }
+      } catch (error) {
+        console.error('Payment error:', error)
+        setError('Payment failed. Please try again.')
+      }
+      
+    } catch (error) {
+      console.error('Error initiating payment:', error)
+      setError('Failed to initiate payment. Please try again.')
+    } finally {
+      setIsProcessing(false)
+      setPaymentId(null)
+    }
   }
 
   return (
@@ -144,10 +241,10 @@ export default function ConversionForm({
 
         <button
           type="submit"
-          disabled={!amount || Number.parseFloat(amount) <= 0}
+          disabled={!amount || Number.parseFloat(amount) <= 0 || isProcessing}
           className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Convert to INR
+          {isProcessing ? "Processing..." : "Convert to INR"}
         </button>
       </form>
     </div>

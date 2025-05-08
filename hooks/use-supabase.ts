@@ -13,58 +13,56 @@ interface Transaction {
 
 export function useSupabase(address?: string) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [isLoading, setIsLoading] = useState(false)
 
   const saveWithdrawalDetails = async (details: any) => {
-    // TODO: In a real implementation, this would save to Supabase
-    console.log("Saving withdrawal details:", details)
-
-    // Mock API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    return true
+    if (!address) {
+      console.error("No wallet address provided for withdrawal")
+      return false
+    }
+    
+    setIsLoading(true)
+    
+    try {
+      const response = await fetch('/api/withdrawals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, ...details }),
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to save withdrawal details')
+      }
+      
+      const data = await response.json()
+      return data.success
+    } catch (error) {
+      console.error("Error saving withdrawal details:", error)
+      return false
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const getTransactionHistory = async () => {
     if (!address) return
+    
+    setIsLoading(true)
 
     try {
-      // TODO: In a real implementation, this would fetch from Supabase
-      // For demo purposes, we'll use mock data
-
-      // Mock API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Mock transactions
-      const mockTransactions: Transaction[] = [
-        {
-          id: "1",
-          token: "WLD",
-          amount: 0.5,
-          inrAmount: 625.38,
-          status: "completed",
-          timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-        },
-        {
-          id: "2",
-          token: "USDC.e",
-          amount: 50,
-          inrAmount: 4169.0,
-          status: "completed",
-          timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-        },
-        {
-          id: "3",
-          token: "ETH",
-          amount: 0.01,
-          inrAmount: 2501.51,
-          status: "pending",
-          timestamp: new Date().toISOString(), // now
-        },
-      ]
-
-      setTransactions(mockTransactions)
+      // Fetch transactions from our API
+      const response = await fetch(`/api/transactions?address=${address}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch transactions')
+      }
+      
+      const data = await response.json()
+      setTransactions(data.transactions)
     } catch (error) {
       console.error("Error fetching transaction history:", error)
+      setTransactions([])
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -72,5 +70,6 @@ export function useSupabase(address?: string) {
     saveWithdrawalDetails,
     getTransactionHistory,
     transactions,
+    isLoading,
   }
 }

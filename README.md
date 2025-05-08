@@ -1,30 +1,88 @@
-# InstaINR Mini-app
+# InstaINR - Worldcoin Mini App
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+InstaINR is a Worldcoin mini-app that enables Indian users to convert their tokens (WLD, USDC.e) to INR and withdraw to their preferred payment method.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/pikaimandalteam/v0-insta-inr-mini-app)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/Sc5vc04qaMy)
+## Features
 
-## Overview
+- **World Wallet Authentication**: Secure login using Worldcoin's wallet authentication
+- **Token Conversion**: Convert WLD and USDC.e tokens to INR with real-time pricing
+- **Multiple Withdrawal Methods**: Support for UPI, PhonePe, Google Pay, Paytm, and Bank Transfer
+- **Transaction History**: Track all your conversion and withdrawal transactions
+- **KYC Verification**: Built-in verification using Aadhaar or PAN for regulatory compliance
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+## Prerequisites
 
-## Deployment
+- [Node.js](https://nodejs.org/) 18.0.0 or later
+- [pnpm](https://pnpm.io/) package manager
+- [World App](https://world.org/download) installed on a mobile device
 
-Your project is live at:
+## Production Deployment
 
-**[https://vercel.com/pikaimandalteam/v0-insta-inr-mini-app](https://vercel.com/pikaimandalteam/v0-insta-inr-mini-app)**
+1. Clone the repository
+   ```bash
+   git clone https://github.com/yourusername/instainr-app.git
+   cd instainr-app
+   ```
 
-## Build your app
+2. Install dependencies
+   ```bash
+   pnpm install
+   ```
 
-Continue building your app on:
+3. Set up your environment variables
+   ```
+   # Create a .env.local file with the following variables
+   NEXT_PUBLIC_APP_ID=your_worldcoin_app_id
+   DEV_PORTAL_API_KEY=your_developer_portal_api_key
+   RECIPIENT_WALLET_ADDRESS=your_whitelisted_wallet_address
+   ```
 
-**[https://v0.dev/chat/projects/Sc5vc04qaMy](https://v0.dev/chat/projects/Sc5vc04qaMy)**
+4. Build the application
+   ```bash
+   pnpm build
+   ```
 
-## How It Works
+5. Start the production server
+   ```bash
+   pnpm start
+   ```
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+6. Register your mini-app in the [Worldcoin Developer Portal](https://developer.worldcoin.org/)
+   - Add your production URL
+   - Configure your app settings
+   - Whitelist your backend wallet address for payments
+
+## Integration Details
+
+### Worldcoin MiniKit
+
+InstaINR uses the Worldcoin MiniKit SDK for:
+
+- Wallet authentication via Sign-In with Ethereum (SIWE)
+- Processing token payment transactions
+- Detecting if the app is running inside World App
+
+### API Endpoints
+
+- `/api/nonce` - Generate nonce for SIWE authentication
+- `/api/complete-siwe` - Verify SIWE signatures
+- `/api/token-prices` - Fetch real-time token prices in INR
+- `/api/initiate-pay` - Initiate token payment transactions
+- `/api/verify-payment` - Verify payment transaction status
+- `/api/withdrawals` - Process withdrawal requests
+- `/api/transactions` - Retrieve transaction history
+
+## Technology Stack
+
+- **Frontend**: Next.js, React, TypeScript, Tailwind CSS
+- **UI Components**: Shadcn UI
+- **Authentication**: Worldcoin Wallet Auth
+- **Payments**: Worldcoin MiniKit payments
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Contact
+
+For questions or support, please contact [your-email@example.com](mailto:your-email@example.com)

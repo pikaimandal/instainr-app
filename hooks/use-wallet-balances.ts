@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { MiniKit } from "@worldcoin/minikit-js"
 
 export function useWalletBalances(address?: string) {
   const [balances, setBalances] = useState<{
@@ -22,8 +23,12 @@ export function useWalletBalances(address?: string) {
     }
 
     try {
-      // TODO: In a real implementation, this would fetch from blockchain or indexer
-      // For demo purposes, we'll use mock data
+      // If MiniKit is installed, in the future we could use it to get balances
+      if (MiniKit.isInstalled()) {
+        // TODO: In a real implementation, use chain data API or wallet SDK to fetch real balances
+        // For development, we'll still use mock data
+        console.log("Fetching balances for address:", address)
+      }
 
       // Mock API call delay - shorter for background refreshes
       await new Promise((resolve) => setTimeout(resolve, isInitialLoad ? 1500 : 500))
