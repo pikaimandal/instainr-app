@@ -156,6 +156,7 @@ export default function Home() {
                         calculateFinal={calculateFinal}
                         onSubmit={handleConvert}
                         minimumAmount={500}
+                        walletAddress={address || ""}
                       />
                     )}
 

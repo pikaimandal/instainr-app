@@ -26,6 +26,7 @@ interface ConversionFormProps {
   calculateFinal: () => number
   onSubmit: () => void
   minimumAmount: number
+  walletAddress: string
 }
 
 export default function ConversionForm({
@@ -40,6 +41,7 @@ export default function ConversionForm({
   calculateFinal,
   onSubmit,
   minimumAmount,
+  walletAddress,
 }: ConversionFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -146,7 +148,10 @@ export default function ConversionForm({
             body: JSON.stringify({
               id: data.id,
               status: 'completed',
-              txHash: finalPayload.transaction_id
+              txHash: finalPayload.transaction_id,
+              token: selectedToken,
+              amount: amount,
+              address: walletAddress
             })
           })
           

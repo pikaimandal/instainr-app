@@ -5,11 +5,14 @@ interface VerifyPaymentRequest {
   status: string;
   txHash?: string;
   transaction_id?: string;
+  token?: string;
+  amount?: string;
+  address?: string;
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { id, status, txHash, transaction_id } = await req.json() as VerifyPaymentRequest
+    const { id, status, txHash, transaction_id, token, amount, address } = await req.json() as VerifyPaymentRequest
     
     if (!id || !status) {
       return NextResponse.json(
@@ -58,8 +61,47 @@ export async function POST(req: NextRequest) {
       
       // Check if this is our transaction and not failed
       if (transaction.reference === id && transaction.transaction_status !== 'failed') {
-        // Store the transaction details in your database for record-keeping
-        // await db.transactions.create({...})
+        // If we have token and amount info, convert to INR value and save transaction record
+        if (token && amount && address) {
+          try {
+            // Fetch token price
+            const priceResponse = await fetch('/api/token-prices', { next: { revalidate: false } });
+            if (!priceResponse.ok) {
+              throw new Error('Failed to fetch token prices');
+            }
+            
+            const priceData = await priceResponse.json();
+            
+            // Calculate INR amount
+            const tokenAmount = parseFloat(amount);
+            const tokenPrice = priceData.prices[token];
+            const inrAmount = tokenAmount * tokenPrice;
+            
+            // Save transaction to our records
+            const transactionResponse = await fetch('/api/transactions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                address,
+                transaction: {
+                  id,
+                  token,
+                  amount: tokenAmount,
+                  inrAmount,
+                  status: 'completed',
+                  timestamp: new Date().toISOString()
+                }
+              })
+            });
+            
+            if (!transactionResponse.ok) {
+              console.error('Failed to save transaction record:', await transactionResponse.text());
+            }
+          } catch (error) {
+            console.error('Error saving transaction record:', error);
+            // Continue anyway as the payment verification succeeded
+          }
+        }
         
         return NextResponse.json({ 
           success: true,

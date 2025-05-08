@@ -11,6 +11,7 @@ export function useWalletBalances(address?: string) {
   } | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchBalances = useCallback(async () => {
     if (!address) {
@@ -21,44 +22,70 @@ export function useWalletBalances(address?: string) {
     if (isInitialLoad) {
       setIsLoading(true)
     }
+    
+    setError(null);
 
     try {
-      // If MiniKit is installed, in the future we could use it to get balances
-      if (MiniKit.isInstalled()) {
-        // TODO: In a real implementation, use chain data API or wallet SDK to fetch real balances
-        // For development, we'll still use mock data
-        console.log("Fetching balances for address:", address)
+      // Fetch real balances using our API
+      const tokens = ['WLD', 'USDC.e', 'ETH'];
+      const results = await Promise.all(
+        tokens.map(token => 
+          fetch(`/api/token-balance?address=${address}&token=${token}`)
+            .then(res => {
+              if (!res.ok) throw new Error(`Failed to fetch ${token} balance`);
+              return res.json();
+            })
+        )
+      );
+      
+      // Extract balances from results
+      const realBalances = {
+        WLD: 0,
+        "USDC.e": 0,
+        ETH: 0
+      };
+      
+      // Map results to the balances object
+      results.forEach(result => {
+        if (result.token === 'WLD') realBalances.WLD = result.balance;
+        else if (result.token === 'USDC.e') realBalances["USDC.e"] = result.balance;
+        else if (result.token === 'ETH') realBalances.ETH = result.balance;
+      });
+
+      console.log("Fetched real balances:", realBalances);
+      
+      setBalances(realBalances);
+      setIsInitialLoad(false);
+    } catch (err: any) {
+      console.error("Error fetching wallet balances:", err);
+      setError(err.message || "Failed to fetch wallet balances");
+      
+      // If we fail to fetch real balances, use zeros as fallback
+      if (!balances) {
+        setBalances({
+          WLD: 0,
+          "USDC.e": 0,
+          ETH: 0
+        });
       }
-
-      // Mock API call delay - shorter for background refreshes
-      await new Promise((resolve) => setTimeout(resolve, isInitialLoad ? 1500 : 500))
-
-      // Mock balances
-      const mockBalances = {
-        WLD: 2.5,
-        "USDC.e": 100,
-        ETH: 0.05,
-      }
-
-      setBalances(mockBalances)
-      setIsInitialLoad(false)
-    } catch (error) {
-      console.error("Error fetching wallet balances:", error)
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [address, isInitialLoad])
+  }, [address, isInitialLoad, balances]);
 
   // Initial fetch
   useEffect(() => {
     if (address) {
-      fetchBalances()
+      fetchBalances();
+    } else {
+      setBalances(null);
     }
-  }, [address, fetchBalances])
+  }, [address, fetchBalances]);
 
   return {
     balances,
     isLoading,
+    error,
     refreshBalances: fetchBalances,
-  }
+  };
 }
