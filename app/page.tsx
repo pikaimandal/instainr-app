@@ -193,13 +193,13 @@ export default function Home() {
               <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 text-center">
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Welcome to InstaINR</h2>
                 <p className="text-gray-600 dark:text-gray-300 mb-6">
-                  Connect your World ID to convert your crypto to INR instantly.
+                  Connect your World Wallet to convert your crypto to INR instantly.
                 </p>
                 <button
                   onClick={connect}
                   className="py-3 px-6 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
                 >
-                  Connect World ID
+                  Connect World Wallet
                 </button>
               </div>
             )}
