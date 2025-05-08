@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+interface Transaction {
+  id: string;
+  token: string;
+  amount: number;
+  inrAmount: number;
+  status: "pending" | "completed" | "failed";
+  timestamp: string;
+}
+
 export async function GET(req: NextRequest) {
   try {
     // Get wallet address from query params
@@ -13,42 +22,14 @@ export async function GET(req: NextRequest) {
       )
     }
     
-    // TODO: In production, fetch transactions from a database
-    // Example implementation:
-    // const transactions = await db.transactions.findMany({
-    //   where: { walletAddress: address },
-    //   orderBy: { timestamp: 'desc' }
-    // })
+    // In production, this would fetch transactions from a database
+    // For now, return an empty array until database is implemented
+    const transactions: Transaction[] = [];
     
-    // For development, use mock data
-    const mockTransactions = [
-      {
-        id: "1",
-        token: "WLD",
-        amount: 0.5,
-        inrAmount: 625.38,
-        status: "completed",
-        timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-      },
-      {
-        id: "2",
-        token: "USDC.e",
-        amount: 50,
-        inrAmount: 4169.0,
-        status: "completed",
-        timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-      },
-      {
-        id: "3",
-        token: "ETH",
-        amount: 0.01,
-        inrAmount: 2501.51,
-        status: "pending",
-        timestamp: new Date().toISOString(), // now
-      },
-    ]
+    // Add log for debugging
+    console.log(`Fetching transactions for wallet: ${address}`);
     
-    return NextResponse.json({ transactions: mockTransactions })
+    return NextResponse.json({ transactions })
   } catch (error: any) {
     console.error('Error fetching transactions:', error)
     return NextResponse.json(
