@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServiceRoleClient } from '@/lib/supabase'
 
 interface Transaction {
   id: string;
@@ -14,21 +15,26 @@ const transactions: Record<string, Transaction[]> = {};
 
 export async function GET(req: NextRequest) {
   try {
-    // Get wallet address from query params
     const { searchParams } = new URL(req.url)
     const address = searchParams.get('address')
     
     if (!address) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Address is required' }, { status: 400 })
     }
     
-    // Return transactions for this address, or empty array if none
-    return NextResponse.json({ 
-      transactions: transactions[address.toLowerCase()] || [] 
-    })
+    const supabase = createServiceRoleClient()
+    
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('wallet_address', address)
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      throw new Error(error.message)
+    }
+    
+    return NextResponse.json({ transactions: data || [] })
   } catch (error: any) {
     console.error('Error fetching transactions:', error)
     return NextResponse.json(
@@ -41,50 +47,34 @@ export async function GET(req: NextRequest) {
 // Add a new POST endpoint to save transactions
 export async function POST(req: NextRequest) {
   try {
-    const { address, transaction } = await req.json()
+    const body = await req.json()
     
-    if (!address) {
+    if (!body.wallet_address) {
       return NextResponse.json(
         { error: 'Wallet address is required' },
         { status: 400 }
       )
     }
     
-    if (!transaction || !transaction.id || !transaction.token) {
-      return NextResponse.json(
-        { error: 'Transaction details are required' },
-        { status: 400 }
-      )
+    const supabase = createServiceRoleClient()
+    
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert(body)
+      .select()
+    
+    if (error) {
+      throw new Error(error.message)
     }
     
-    // Ensure the transaction has required fields
-    const newTransaction: Transaction = {
-      id: transaction.id,
-      token: transaction.token,
-      amount: transaction.amount || 0,
-      inrAmount: transaction.inrAmount || 0,
-      status: transaction.status || 'completed',
-      timestamp: transaction.timestamp || new Date().toISOString()
-    };
-    
-    // Store the transaction
-    const normalizedAddress = address.toLowerCase();
-    if (!transactions[normalizedAddress]) {
-      transactions[normalizedAddress] = [];
-    }
-    
-    // Add to beginning of array (newest first)
-    transactions[normalizedAddress].unshift(newTransaction);
-    
-    // Return success
-    return NextResponse.json({ 
-      success: true, 
-      transaction: newTransaction 
+    return NextResponse.json({
+      success: true,
+      transaction: data?.[0] || null
     })
   } catch (error: any) {
-    console.error('Error saving transaction:', error)
+    console.error('Error creating transaction:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to save transaction' },
+      { error: error.message || 'Failed to create transaction' },
       { status: 500 }
     )
   }

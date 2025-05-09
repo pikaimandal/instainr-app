@@ -1,91 +1,113 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { MiniKit } from "@worldcoin/minikit-js"
+import { useEffect, useState } from "react"
+
+interface TokenBalance {
+  token: string;
+  balance: number;
+  balanceInINR: number;
+  decimals: number;
+}
+
+interface TokenPrices {
+  WLD: number;
+  "USDC.e": number;
+  ETH: number;
+}
 
 export function useWalletBalances(address?: string) {
-  const [balances, setBalances] = useState<{
-    WLD: number
-    "USDC.e": number
-    ETH: number
-  } | null>(null)
+  const [balances, setBalances] = useState<TokenBalance[]>([])
+  const [totalBalanceINR, setTotalBalanceINR] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(false)
-  const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchBalances = useCallback(async () => {
-    if (!address) {
-      return
-    }
-
-    // Only show loading state on initial load
-    if (isInitialLoad) {
-      setIsLoading(true)
-    }
+  const fetchBalances = async () => {
+    if (!address) return
     
-    setError(null);
-
+    setIsLoading(true)
+    setError(null)
+    
     try {
-      // Fetch real balances using our API
-      const tokens = ['WLD', 'USDC.e', 'ETH'];
-      const results = await Promise.all(
-        tokens.map(token => 
-          fetch(`/api/token-balance?address=${address}&token=${token}`)
-            .then(res => {
-              if (!res.ok) throw new Error(`Failed to fetch ${token} balance`);
-              return res.json();
-            })
-        )
-      );
-      
-      // Extract balances from results
-      const realBalances = {
-        WLD: 0,
-        "USDC.e": 0,
-        ETH: 0
-      };
-      
-      // Map results to the balances object
-      results.forEach(result => {
-        if (result.token === 'WLD') realBalances.WLD = result.balance;
-        else if (result.token === 'USDC.e') realBalances["USDC.e"] = result.balance;
-        else if (result.token === 'ETH') realBalances.ETH = result.balance;
-      });
-
-      console.log("Fetched real balances:", realBalances);
-      
-      setBalances(realBalances);
-      setIsInitialLoad(false);
-    } catch (err: any) {
-      console.error("Error fetching wallet balances:", err);
-      setError(err.message || "Failed to fetch wallet balances");
-      
-      // If we fail to fetch real balances, use zeros as fallback
-      if (!balances) {
-        setBalances({
-          WLD: 0,
-          "USDC.e": 0,
-          ETH: 0
-        });
+      // Fetch token prices from Worldcoin API
+      const priceResponse = await fetch('/api/token-prices')
+      if (!priceResponse.ok) {
+        throw new Error('Failed to fetch token prices')
       }
+      
+      const { prices } = await priceResponse.json() as { prices: TokenPrices }
+      
+      // Fetch WLD balance
+      const wldBalanceResponse = await fetch(`/api/token-balance?address=${address}&token=WLD`)
+      if (!wldBalanceResponse.ok) {
+        throw new Error('Failed to fetch WLD balance')
+      }
+      
+      const wldData = await wldBalanceResponse.json()
+      
+      // Fetch USDC.e balance
+      const usdcBalanceResponse = await fetch(`/api/token-balance?address=${address}&token=USDC.e`)
+      if (!usdcBalanceResponse.ok) {
+        throw new Error('Failed to fetch USDC.e balance')
+      }
+      
+      const usdcData = await usdcBalanceResponse.json()
+      
+      // Fetch ETH balance
+      const ethBalanceResponse = await fetch(`/api/token-balance?address=${address}&token=ETH`)
+      if (!ethBalanceResponse.ok) {
+        throw new Error('Failed to fetch ETH balance')
+      }
+      
+      const ethData = await ethBalanceResponse.json()
+      
+      // Format balances with INR value
+      const tokenBalances: TokenBalance[] = [
+        {
+          token: "WLD",
+          balance: wldData.balance,
+          balanceInINR: wldData.balance * prices.WLD,
+          decimals: 18
+        },
+        {
+          token: "USDC.e",
+          balance: usdcData.balance,
+          balanceInINR: usdcData.balance * prices["USDC.e"],
+          decimals: 6
+        },
+        {
+          token: "ETH",
+          balance: ethData.balance,
+          balanceInINR: ethData.balance * prices.ETH,
+          decimals: 18
+        }
+      ]
+      
+      // Calculate total balance in INR
+      const total = tokenBalances.reduce((sum, token) => sum + token.balanceInINR, 0)
+      
+      setBalances(tokenBalances)
+      setTotalBalanceINR(total)
+    } catch (err: any) {
+      console.error("Error fetching wallet balances:", err)
+      setError(err.message || "Failed to fetch wallet balances")
+      setBalances([])
+      setTotalBalanceINR(0)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  }, [address, isInitialLoad, balances]);
+  }
 
-  // Initial fetch
   useEffect(() => {
     if (address) {
-      fetchBalances();
-    } else {
-      setBalances(null);
+      fetchBalances()
     }
-  }, [address, fetchBalances]);
+  }, [address])
 
   return {
     balances,
+    totalBalanceINR,
     isLoading,
     error,
-    refreshBalances: fetchBalances,
-  };
+    refresh: fetchBalances
+  }
 }

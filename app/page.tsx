@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import Header from "@/components/header"
 import WalletOverview from "@/components/wallet-overview"
 import ConversionForm from "@/components/conversion-form"
@@ -28,8 +28,13 @@ export default function Home() {
   const { theme, setTheme } = useTheme()
   const { isConnected, address, connect, disconnect } = useWorldID()
   const { prices } = useTokenPrices()
-  const { balances, refreshBalances } = useWalletBalances(address)
-  const { saveWithdrawalDetails, getTransactionHistory, transactions } = useSupabase(address)
+  const { balances, totalBalanceINR, refresh: refreshBalances } = useWalletBalances(address)
+  const { 
+    saveWithdrawalDetails, 
+    getTransactionHistory, 
+    transactions, 
+    isLoading: isTransactionsLoading 
+  } = useSupabase(address)
 
   // Calculate conversion amount in INR
   const calculateINR = () => {
@@ -63,14 +68,18 @@ export default function Home() {
   // Handle withdrawal submission
   const handleWithdraw = async (withdrawalDetails: any) => {
     try {
-      // TODO: Send conversion request to backend
-      await saveWithdrawalDetails(withdrawalDetails)
-
-      // Mock API call to /api/convert
-      // In a real app, this would send the tokens to your backend wallet
-      console.log("Converting", amount, selectedToken, "to INR")
-      console.log("Sending INR to", withdrawalDetails)
-
+      // Add token and amount information to withdrawal details
+      const enhancedWithdrawalDetails = {
+        ...withdrawalDetails,
+        token: selectedToken,
+        originalAmount: parseFloat(amount),
+        inrAmount: calculateINR(),
+        fee: calculateFee()
+      }
+      
+      // Save withdrawal details to Supabase
+      await saveWithdrawalDetails(enhancedWithdrawalDetails)
+      
       setConversionStep("complete")
 
       // Refresh transaction history and balances in the background
@@ -111,9 +120,6 @@ export default function Home() {
     }
   }, [isConnected, address, getTransactionHistory])
 
-  // Determine if we should show content
-  const shouldShowContent = isConnected || (!isConnected && !balances)
-
   return (
     <main className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900 transition-colors">
       <Header
@@ -129,84 +135,91 @@ export default function Home() {
       />
 
       <div className="container max-w-md px-4 py-8 flex-1 flex flex-col">
-        {shouldShowContent ? (
-          <>
-            {isConnected ? (
+        {isConnected ? (
+          <div className="flex-1 flex flex-col">
+            {/* Wallet Page */}
+            {activePage === "wallet" && (
               <div className="flex-1 flex flex-col">
-                {/* Wallet Page */}
-                {activePage === "wallet" && (
-                  <div className="flex-1 flex flex-col">
-                    <WalletOverview balances={balances} prices={prices} />
-                  </div>
-                )}
-
-                {/* Convert Page */}
-                {activePage === "convert" && (
-                  <div className="flex-1 flex flex-col">
-                    {conversionStep === "form" && (
-                      <ConversionForm
-                        selectedToken={selectedToken}
-                        setSelectedToken={setSelectedToken}
-                        amount={amount}
-                        setAmount={setAmount}
-                        balances={balances}
-                        prices={prices}
-                        calculateINR={calculateINR}
-                        calculateFee={calculateFee}
-                        calculateFinal={calculateFinal}
-                        onSubmit={handleConvert}
-                        minimumAmount={500}
-                        walletAddress={address || ""}
-                      />
-                    )}
-
-                    {conversionStep === "withdraw" && (
-                      <WithdrawalForm amount={calculateFinal()} onSubmit={handleWithdraw} />
-                    )}
-
-                    {conversionStep === "complete" && (
-                      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
-                          Conversion Submitted!
-                        </h2>
-                        <p className="text-gray-600 dark:text-gray-300 mb-6">
-                          You'll receive ₹{calculateFinal().toFixed(2)} in your account within 30 minutes.
-                        </p>
-                        <button
-                          onClick={handleReset}
-                          className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
-                        >
-                          Convert More
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Transactions Page */}
-                {activePage === "transactions" && (
-                  <div className="flex-1 flex flex-col">
-                    <TransactionHistory transactions={transactions} />
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 text-center">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Welcome to InstaINR</h2>
-                <p className="text-gray-600 dark:text-gray-300 mb-6">
-                  Connect your World Wallet to convert your crypto to INR instantly.
-                </p>
-                <button
-                  onClick={connect}
-                  className="py-3 px-6 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
-                >
-                  Connect World Wallet
-                </button>
+                <WalletOverview balances={balances} totalBalanceINR={totalBalanceINR} />
               </div>
             )}
-          </>
+
+            {/* Convert Page */}
+            {activePage === "convert" && (
+              <div className="flex-1 flex flex-col">
+                {conversionStep === "form" && (
+                  <ConversionForm
+                    selectedToken={selectedToken}
+                    setSelectedToken={setSelectedToken}
+                    amount={amount}
+                    setAmount={setAmount}
+                    balances={balances}
+                    prices={prices}
+                    calculateINR={calculateINR}
+                    calculateFee={calculateFee}
+                    calculateFinal={calculateFinal}
+                    onSubmit={handleConvert}
+                    minimumAmount={500}
+                    walletAddress={address || ""}
+                  />
+                )}
+
+                {conversionStep === "withdraw" && (
+                  <WithdrawalForm 
+                    amount={calculateFinal()} 
+                    token={selectedToken}
+                    originalAmount={parseFloat(amount)}
+                    inrAmount={calculateINR()}
+                    fee={calculateFee()}
+                    onSubmit={handleWithdraw} 
+                  />
+                )}
+
+                {conversionStep === "complete" && (
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
+                      Conversion Submitted!
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-300 mb-6">
+                      You'll receive ₹{calculateFinal().toFixed(2)} in your account within 30 minutes.
+                    </p>
+                    <button
+                      onClick={handleReset}
+                      className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+                    >
+                      Convert More
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Transactions Page */}
+            {activePage === "transactions" && (
+              <div className="flex-1 flex flex-col">
+                {isTransactionsLoading ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : (
+                  <TransactionHistory transactions={transactions} />
+                )}
+              </div>
+            )}
+          </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center">{/* Empty state - no loading message */}</div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 text-center">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Welcome to InstaINR</h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Connect your World Wallet to convert your crypto to INR instantly.
+            </p>
+            <button
+              onClick={connect}
+              className="py-3 px-6 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+            >
+              Connect World Wallet
+            </button>
+          </div>
         )}
       </div>
 
