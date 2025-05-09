@@ -15,23 +15,22 @@ export function useTokenPrices() {
       setIsLoading(true)
 
       try {
-        // Fetch token prices from our API
-        const response = await fetch('/api/token-prices')
-        if (!response.ok) {
-          throw new Error('Failed to fetch token prices')
+        // TODO: In a real implementation, this would fetch from CoinGecko API
+        // For demo purposes, we'll use mock data
+
+        // Mock API call delay
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        // Mock prices in INR
+        const mockPrices = {
+          WLD: 1250.75, // ~$15 USD
+          "USDC.e": 83.38, // ~$1 USD
+          ETH: 250150.5, // ~$3000 USD
         }
-        
-        const data = await response.json()
-        setPrices(data.prices)
+
+        setPrices(mockPrices)
       } catch (error) {
         console.error("Error fetching token prices:", error)
-        
-        // Use fallback prices if API fails
-        setPrices({
-          WLD: 1250.75,
-          "USDC.e": 83.38,
-          ETH: 250150.5,
-        })
       } finally {
         setIsLoading(false)
       }

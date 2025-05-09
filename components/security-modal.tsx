@@ -48,14 +48,14 @@ export default function SecurityModal({ onClose }: SecurityModalProps) {
           <div>
             <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-1">Support</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Need help? Contact our support team on Telegram:
+              Need help? Contact our support team on Twitter/X:
               <a
-                href="https://t.me/instainr_support"
+                href="https://x.com/insta_inr"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 ml-1"
               >
-                @instainr_support
+                @insta_inr
               </a>
             </p>
           </div>

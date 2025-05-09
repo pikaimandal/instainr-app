@@ -1,55 +1,61 @@
-import React from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 
-interface TokenBalance {
-  token: string;
-  balance: number;
-  balanceInINR: number;
-  decimals: number;
-}
-
 interface WalletOverviewProps {
-  balances: TokenBalance[];
-  totalBalanceINR: number;
+  balances: {
+    WLD: number
+    "USDC.e": number
+    ETH: number
+  } | null
+  prices: {
+    WLD: number
+    "USDC.e": number
+    ETH: number
+  } | null
 }
 
-export default function WalletOverview({ balances, totalBalanceINR }: WalletOverviewProps) {
-  const isLoading = !balances || balances.length === 0;
-  
+export default function WalletOverview({ balances, prices }: WalletOverviewProps) {
+  if (!balances || !prices) {
+    return <WalletOverviewSkeleton />
+  }
+
+  const calculateINRValue = (token: "WLD" | "USDC.e" | "ETH") => {
+    return balances[token] * prices[token]
+  }
+
+  const totalINR = calculateINRValue("WLD") + calculateINRValue("USDC.e") + calculateINRValue("ETH")
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-2">Wallet Overview</h2>
-      
-      {isLoading ? (
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          <div className="space-y-2">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
-          </div>
+    <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700">
+      <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Your Wallet</h2>
+        <p className="text-2xl font-bold mt-2 text-gray-900 dark:text-white">₹{totalINR.toFixed(2)}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Total Balance in INR</p>
+      </div>
+
+      <div className="divide-y divide-gray-100 dark:divide-gray-700">
+        <TokenRow token="WLD" balance={balances.WLD} inrValue={calculateINRValue("WLD")} />
+        <TokenRow token="USDC.e" balance={balances["USDC.e"]} inrValue={calculateINRValue("USDC.e")} />
+        <TokenRow token="ETH" balance={balances.ETH} inrValue={calculateINRValue("ETH")} />
+      </div>
+    </div>
+  )
+}
+
+function TokenRow({ token, balance, inrValue }: { token: string; balance: number; inrValue: number }) {
+  return (
+    <div className="flex items-center justify-between p-4">
+      <div className="flex items-center">
+        <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mr-3">
+          <span className="text-xs font-medium text-gray-800 dark:text-gray-200">{token.substring(0, 1)}</span>
         </div>
-      ) : (
-        <>
-          <div className="mb-6">
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Total Balance (INR)</p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">₹{totalBalanceINR.toFixed(2)}</p>
-          </div>
-          
-          <div className="space-y-4">
-            {balances.map((token) => (
-              <div key={token.token} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-800 dark:text-gray-200">{token.token}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">₹{token.balanceInINR.toFixed(2)}</p>
-                </div>
-                <p className="font-medium text-gray-800 dark:text-gray-200">
-                  {token.balance.toFixed(token.token === "USDC.e" ? 2 : 4)}
-                </p>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+        <div>
+          <p className="font-medium text-gray-800 dark:text-gray-200">{token}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{balance.toFixed(4)}</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="font-medium text-gray-800 dark:text-gray-200">₹{inrValue.toFixed(2)}</p>
+      </div>
     </div>
   )
 }

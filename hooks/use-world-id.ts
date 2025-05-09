@@ -1,13 +1,62 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { MiniKit, ResponseEvent, MiniAppWalletAuthSuccessPayload } from "@worldcoin/minikit-js"
+import { useState, useEffect } from "react"
 
 export function useWorldID() {
   const [isConnected, setIsConnected] = useState(false)
   const [address, setAddress] = useState<string | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(false)
-  const [nonce, setNonce] = useState<string | null>(null)
+
+  // Initialize Worldcoin Minikit
+  useEffect(() => {
+    // Load Worldcoin Minikit script
+    const script = document.createElement("script")
+    script.src = "https://cdn.worldcoin.org/minikit/v0.1.0/minikit.js"
+    script.async = true
+    document.body.appendChild(script)
+
+    return () => {
+      document.body.removeChild(script)
+    }
+  }, [])
+
+  const connect = async () => {
+    setIsLoading(true)
+
+    try {
+      // TODO: In a real implementation, this would use the actual Worldcoin Minikit
+      // For demo purposes, we'll simulate a successful connection after a delay
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      // Mock address - in a real app, this would come from the Worldcoin Minikit
+      const mockAddress =
+        "0x" +
+        Array(40)
+          .fill(0)
+          .map(() => Math.floor(Math.random() * 16).toString(16))
+          .join("")
+
+      setAddress(mockAddress)
+      setIsConnected(true)
+
+      // Store in localStorage for persistence
+      localStorage.setItem("worldcoin_connected", "true")
+      localStorage.setItem("worldcoin_address", mockAddress)
+    } catch (error) {
+      console.error("Error connecting to World ID:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const disconnect = () => {
+    setIsConnected(false)
+    setAddress(undefined)
+
+    // Remove from localStorage
+    localStorage.removeItem("worldcoin_connected")
+    localStorage.removeItem("worldcoin_address")
+  }
 
   // Check for existing connection on mount
   useEffect(() => {
@@ -18,94 +67,6 @@ export function useWorldID() {
       setIsConnected(true)
       setAddress(savedAddress)
     }
-  }, [])
-
-  // Set up wallet auth listener
-  useEffect(() => {
-    if (!MiniKit.isInstalled()) {
-      return
-    }
-
-    // Subscribe to wallet auth events
-    MiniKit.subscribe(ResponseEvent.MiniAppWalletAuth, async (payload: any) => {
-      if (payload.status === 'error') {
-        console.error("Wallet auth error:", payload.error)
-        setIsLoading(false)
-        return
-      }
-      
-      // Success payload
-      const successPayload = payload as MiniAppWalletAuthSuccessPayload
-      
-      try {
-        // Verify the authentication on the backend
-        const response = await fetch('/api/complete-siwe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ payload: successPayload, nonce }),
-        })
-        
-        const data = await response.json()
-        
-        if (data.isValid) {
-          // Set the wallet address
-          setAddress(successPayload.address)
-          setIsConnected(true)
-          
-          // Store in localStorage for persistence
-          localStorage.setItem("worldcoin_connected", "true")
-          localStorage.setItem("worldcoin_address", successPayload.address)
-        } else {
-          console.error("Failed to verify wallet authentication:", data.message)
-        }
-      } catch (error) {
-        console.error("Error verifying wallet authentication:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    })
-
-    return () => {
-      MiniKit.unsubscribe(ResponseEvent.MiniAppWalletAuth)
-    }
-  }, [nonce])
-
-  const connect = useCallback(async () => {
-    if (!MiniKit.isInstalled()) {
-      console.error("MiniKit not installed, cannot connect wallet")
-      return
-    }
-
-    setIsLoading(true)
-
-    try {
-      // Get nonce from backend
-      const res = await fetch(`/api/nonce`)
-      const { nonce: newNonce } = await res.json()
-      setNonce(newNonce)
-      
-      // Initiate wallet auth
-      MiniKit.commands.walletAuth({
-        nonce: newNonce,
-        expirationTime: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000),
-        notBefore: new Date(new Date().getTime() - 24 * 60 * 60 * 1000),
-        statement: 'Sign in to InstaINR to convert your tokens to INR',
-      })
-      
-      // Response will be handled by the subscription
-    } catch (error) {
-      console.error("Error connecting to World ID:", error)
-      setIsLoading(false)
-    }
-  }, [])
-
-  const disconnect = useCallback(() => {
-    setIsConnected(false)
-    setAddress(undefined)
-
-    // Remove from localStorage
-    localStorage.removeItem("worldcoin_connected")
-    localStorage.removeItem("worldcoin_address")
   }, [])
 
   return {
