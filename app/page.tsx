@@ -13,9 +13,7 @@ import { useTokenPrices } from "@/hooks/use-token-prices"
 import { useWalletBalances } from "@/hooks/use-wallet-balances"
 import { useFirebase } from "@/hooks/use-firebase"
 import { useTheme } from "@/providers/theme-provider"
-
-// Test mode constant
-const TEST_MODE = true;
+import { TEST_MODE, MIN_CONVERSION_AMOUNT, CONVERSION_FEE_PERCENTAGE } from "@/lib/config"
 
 type Page = "wallet" | "convert" | "transactions"
 type ConversionStep = "form" | "withdraw" | "complete"
@@ -49,7 +47,7 @@ export default function Home() {
   // Calculate fee (5%)
   const calculateFee = () => {
     const inrAmount = calculateINR()
-    return inrAmount * 0.05
+    return inrAmount * CONVERSION_FEE_PERCENTAGE
   }
 
   // Calculate final amount
@@ -61,8 +59,8 @@ export default function Home() {
 
   // Handle conversion submission
   const handleConvert = () => {
-    // Check if the conversion amount is less than 500 INR
-    if (calculateFinal() < 500) {
+    // Check if the conversion amount is less than minimum INR
+    if (calculateFinal() < MIN_CONVERSION_AMOUNT) {
       return
     }
     setConversionStep("withdraw")
@@ -168,7 +166,7 @@ export default function Home() {
                     calculateFee={calculateFee}
                     calculateFinal={calculateFinal}
                     onSubmit={handleConvert}
-                    minimumAmount={500}
+                    minimumAmount={MIN_CONVERSION_AMOUNT}
                     walletAddress={address || ""}
                   />
                 )}

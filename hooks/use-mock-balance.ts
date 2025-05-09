@@ -1,28 +1,10 @@
 "use client"
 
 import { useState } from 'react'
+import { MOCK_DATA } from '@/lib/config'
 
-// Mock token data for testing
-const mockTokens = {
-  WLD: {
-    symbol: 'WLD',
-    name: 'Worldcoin',
-    balance: 10.5,
-    price: 75.25 // INR price per token
-  },
-  USDC: {
-    symbol: 'USDC.e',
-    name: 'USD Coin',
-    balance: 25.0,
-    price: 82.86 // INR price per token
-  },
-  ETH: {
-    symbol: 'ETH',
-    name: 'Ethereum',
-    balance: 0.15,
-    price: 223450.75 // INR price per token
-  }
-}
+// Use mock token data from config
+const mockTokens = MOCK_DATA.tokens;
 
 export function useMockBalance() {
   const [loading, setLoading] = useState(false)

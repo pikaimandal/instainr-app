@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminFirestore } from '@/lib/firebase-admin'
+import { TEST_MODE } from '@/lib/config'
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,6 +9,16 @@ export async function POST(request: NextRequest) {
     
     if (!payment_id) {
       return NextResponse.json({ error: 'Payment ID is required' }, { status: 400 })
+    }
+    
+    // In test mode, just return success
+    if (TEST_MODE) {
+      console.log(`[TEST MODE] Mocking payment verification for payment_id: ${payment_id}`);
+      return NextResponse.json({ 
+        success: true,
+        test_mode: true,
+        message: 'Payment verification simulated in test mode'
+      });
     }
     
     const db = getAdminFirestore()
@@ -46,6 +57,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Error verifying payment:', error)
+    
+    // Return mock success in test mode
+    if (TEST_MODE) {
+      console.log('[TEST MODE] Error occurred during verification, returning mock success');
+      return NextResponse.json({ 
+        success: true,
+        test_mode: true,
+        message: 'Payment verification simulated in test mode despite error'
+      });
+    }
+    
     return NextResponse.json({ error: 'Failed to verify payment' }, { status: 500 })
   }
 } 

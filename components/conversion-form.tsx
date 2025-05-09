@@ -19,9 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { MiniKit, ResponseEvent, Tokens, tokenToDecimals } from "@worldcoin/minikit-js"
-
-// Enable test mode to bypass balance checks
-const TEST_MODE = true;
+import { TEST_MODE } from "@/lib/config"
 
 interface TokenBalance {
   token: string;
