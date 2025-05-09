@@ -86,3 +86,13 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Contact
 
 For questions or support, please contact [your-email@example.com](mailto:your-email@example.com)
+
+## Firebase Integration
+
+This project now uses Firebase for data storage, replacing the previous Supabase implementation. 
+
+Key Firebase components:
+- Firestore Database: Stores users, payments, and transactions
+- Firebase Admin SDK: Secure server-side operations
+
+For detailed Firebase setup instructions, see [FIREBASE.md](./FIREBASE.md).

@@ -1,5 +1,6 @@
 import React from "react"
 import { format } from "date-fns"
+import { Timestamp } from "firebase/firestore"
 
 interface Transaction {
   id: string
@@ -15,7 +16,7 @@ interface Transaction {
   verification_type: string
   verification_number: string
   status: 'pending' | 'completed' | 'failed'
-  created_at: string
+  created_at: Timestamp | string
 }
 
 interface TransactionHistoryProps {
@@ -81,7 +82,7 @@ export default function TransactionHistory({ transactions }: TransactionHistoryP
             <div className="flex justify-between items-start mb-2">
               <div>
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {format(new Date(transaction.created_at), "MMM d, yyyy · h:mm a")}
+                  {format(new Date(transaction.created_at as string), "MMM d, yyyy · h:mm a")}
                 </span>
                 <h3 className="font-medium text-gray-800 dark:text-gray-200">
                   {transaction.token} to INR

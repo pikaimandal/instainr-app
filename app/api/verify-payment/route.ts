@@ -1,77 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase'
+import { getAdminFirestore } from '@/lib/firebase-admin'
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { payment_id, transaction_id } = await req.json()
+    const body = await request.json()
+    const { payment_id, transaction_id, status } = body
     
-    if (!payment_id || !transaction_id) {
-      return NextResponse.json(
-        { error: 'Missing payment_id or transaction_id' },
-        { status: 400 }
-      )
+    if (!payment_id) {
+      return NextResponse.json({ error: 'Payment ID is required' }, { status: 400 })
     }
     
-    const supabase = createServiceRoleClient()
+    const db = getAdminFirestore()
     
-    // 1. Update the payment record
-    const { error: paymentError } = await supabase
-      .from('payments')
-      .update({
-        transaction_id,
-        status: 'completed',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', payment_id)
+    // Update payment document
+    const paymentRef = db.collection('payments').doc(payment_id)
+    const paymentSnap = await paymentRef.get()
     
-    if (paymentError) {
-      console.error('Error updating payment:', paymentError)
-      return NextResponse.json(
-        { error: 'Failed to verify payment' },
-        { status: 500 }
-      )
+    if (!paymentSnap.exists) {
+      return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
     }
     
-    // 2. Find and update the transaction associated with this payment
-    const { data: transactions, error: txError } = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('payment_id', payment_id)
-      .single()
-    
-    if (txError) {
-      console.error('Error fetching transaction:', txError)
-      return NextResponse.json(
-        { error: 'Failed to find transaction record' },
-        { status: 500 }
-      )
-    }
-    
-    // 3. Update transaction status
-    if (transactions) {
-      const { error: updateError } = await supabase
-        .from('transactions')
-        .update({
-          status: 'completed',
-          transaction_id,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', transactions.id)
-      
-      if (updateError) {
-        console.error('Error updating transaction:', updateError)
-      }
-    }
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Payment verified successfully'
+    await paymentRef.update({
+      transaction_id,
+      status,
+      updated_at: new Date()
     })
+    
+    // Update transaction document
+    const transactionsQuery = await db.collection('transactions')
+      .where('payment_id', '==', payment_id)
+      .limit(1)
+      .get()
+    
+    if (transactionsQuery.empty) {
+      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
+    }
+    
+    const transactionDoc = transactionsQuery.docs[0]
+    await db.collection('transactions').doc(transactionDoc.id).update({
+      transaction_id,
+      status,
+      updated_at: new Date()
+    })
+    
+    return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Error verifying payment:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to verify payment' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to verify payment' }, { status: 500 })
   }
 } 

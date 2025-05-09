@@ -11,8 +11,11 @@ import BottomNavigation from "@/components/bottom-navigation"
 import { useWorldID } from "@/hooks/use-world-id"
 import { useTokenPrices } from "@/hooks/use-token-prices"
 import { useWalletBalances } from "@/hooks/use-wallet-balances"
-import { useSupabase } from "@/hooks/use-supabase"
+import { useFirebase } from "@/hooks/use-firebase"
 import { useTheme } from "@/providers/theme-provider"
+
+// Test mode constant
+const TEST_MODE = true;
 
 type Page = "wallet" | "convert" | "transactions"
 type ConversionStep = "form" | "withdraw" | "complete"
@@ -34,7 +37,7 @@ export default function Home() {
     getTransactionHistory, 
     transactions, 
     isLoading: isTransactionsLoading 
-  } = useSupabase(address)
+  } = useFirebase(address)
 
   // Calculate conversion amount in INR
   const calculateINR = () => {
@@ -77,7 +80,7 @@ export default function Home() {
         fee: calculateFee()
       }
       
-      // Save withdrawal details to Supabase
+      // Save withdrawal details to Firebase
       await saveWithdrawalDetails(enhancedWithdrawalDetails)
       
       setConversionStep("complete")
@@ -122,6 +125,12 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900 transition-colors">
+      {TEST_MODE && (
+        <div className="bg-green-600 text-white text-center py-1 text-sm font-medium">
+          Test Mode Enabled — No real transactions will be made
+        </div>
+      )}
+      
       <Header
         isConnected={isConnected}
         address={address}

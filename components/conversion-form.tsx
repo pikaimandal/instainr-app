@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/select"
 import { MiniKit, ResponseEvent, Tokens, tokenToDecimals } from "@worldcoin/minikit-js"
 
+// Enable test mode to bypass balance checks
+const TEST_MODE = true;
+
 interface TokenBalance {
   token: string;
   balance: number;
@@ -87,7 +90,11 @@ export default function ConversionForm({
 
   // Set max available
   const handleSetMax = () => {
-    if (maxAmount > 0) {
+    if (TEST_MODE) {
+      // In test mode, set a reasonable mock value
+      const mockMax = selectedToken === "ETH" ? 0.1 : 10;
+      setAmount(mockMax.toFixed(6));
+    } else if (maxAmount > 0) {
       // Format to 6 decimal places for display
       setAmount(maxAmount.toFixed(6))
     }
@@ -102,10 +109,13 @@ export default function ConversionForm({
       return
     }
     
-    // Validate amount is not more than available balance
-    if (parsedAmount > maxAmount) {
-      setError(`You don't have enough ${selectedToken}`)
-      return
+    if (!TEST_MODE) {
+      // Only check balance in non-test mode
+      // Validate amount is not more than available balance
+      if (parsedAmount > maxAmount) {
+        setError(`You don't have enough ${selectedToken}`)
+        return
+      }
     }
     
     // Validate minimum amount
@@ -146,6 +156,7 @@ export default function ConversionForm({
             </Select>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Balance: {currentTokenBalance ? currentTokenBalance.balance.toFixed(6) : '0'} {selectedToken}
+              {TEST_MODE && <span className="ml-2 text-green-500">(Test Mode Enabled)</span>}
             </p>
           </div>
           
