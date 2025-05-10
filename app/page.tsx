@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Header from "@/components/header"
 import WalletOverview from "@/components/wallet-overview"
 import ConversionForm from "@/components/conversion-form"
+import BuyWithINRForm from "@/components/buy-with-inr-form"
 import WithdrawalForm from "@/components/withdrawal-form"
 import TransactionHistory from "@/components/transaction-history"
 import SecurityModal from "@/components/security-modal"
@@ -16,9 +17,11 @@ import { useTheme } from "@/providers/theme-provider"
 
 type Page = "wallet" | "convert" | "transactions"
 type ConversionStep = "form" | "withdraw" | "complete"
+type ConvertTab = "sell" | "buy"
 
 export default function Home() {
   const [activePage, setActivePage] = useState<Page>("wallet")
+  const [activeConvertTab, setActiveConvertTab] = useState<ConvertTab>("sell")
   const [conversionStep, setConversionStep] = useState<ConversionStep>("form")
   const [selectedToken, setSelectedToken] = useState<"WLD" | "USDC.e" | "ETH">("WLD")
   const [amount, setAmount] = useState<string>("")
@@ -143,42 +146,74 @@ export default function Home() {
                 {/* Convert Page */}
                 {activePage === "convert" && (
                   <div className="flex-1 flex flex-col">
-                    {conversionStep === "form" && (
-                      <ConversionForm
-                        selectedToken={selectedToken}
-                        setSelectedToken={setSelectedToken}
-                        amount={amount}
-                        setAmount={setAmount}
-                        balances={balances}
-                        prices={prices}
-                        calculateINR={calculateINR}
-                        calculateFee={calculateFee}
-                        calculateFinal={calculateFinal}
-                        onSubmit={handleConvert}
-                        minimumAmount={500}
-                      />
+                    {/* Tab Navigation */}
+                    <div className="flex mb-4 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                      <button
+                        onClick={() => setActiveConvertTab("sell")}
+                        className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                          activeConvertTab === "sell"
+                            ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                            : "text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
+                        }`}
+                      >
+                        Convert to INR
+                      </button>
+                      <button
+                        onClick={() => setActiveConvertTab("buy")}
+                        className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                          activeConvertTab === "buy"
+                            ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                            : "text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
+                        }`}
+                      >
+                        Buy with INR
+                      </button>
+                    </div>
+
+                    {/* Convert to INR Tab */}
+                    {activeConvertTab === "sell" && (
+                      <>
+                        {conversionStep === "form" && (
+                          <ConversionForm
+                            selectedToken={selectedToken}
+                            setSelectedToken={setSelectedToken}
+                            amount={amount}
+                            setAmount={setAmount}
+                            balances={balances}
+                            prices={prices}
+                            calculateINR={calculateINR}
+                            calculateFee={calculateFee}
+                            calculateFinal={calculateFinal}
+                            onSubmit={handleConvert}
+                            minimumAmount={500}
+                          />
+                        )}
+
+                        {conversionStep === "withdraw" && (
+                          <WithdrawalForm amount={calculateFinal()} onSubmit={handleWithdraw} />
+                        )}
+
+                        {conversionStep === "complete" && (
+                          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
+                              Conversion Submitted!
+                            </h2>
+                            <p className="text-gray-600 dark:text-gray-300 mb-6">
+                              You'll receive ₹{calculateFinal().toFixed(2)} in your account within 30 minutes.
+                            </p>
+                            <button
+                              onClick={handleReset}
+                              className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+                            >
+                              Convert More
+                            </button>
+                          </div>
+                        )}
+                      </>
                     )}
 
-                    {conversionStep === "withdraw" && (
-                      <WithdrawalForm amount={calculateFinal()} onSubmit={handleWithdraw} />
-                    )}
-
-                    {conversionStep === "complete" && (
-                      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
-                          Conversion Submitted!
-                        </h2>
-                        <p className="text-gray-600 dark:text-gray-300 mb-6">
-                          You'll receive ₹{calculateFinal().toFixed(2)} in your account within 30 minutes.
-                        </p>
-                        <button
-                          onClick={handleReset}
-                          className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
-                        >
-                          Convert More
-                        </button>
-                      </div>
-                    )}
+                    {/* Buy with INR Tab */}
+                    {activeConvertTab === "buy" && <BuyWithINRForm />}
                   </div>
                 )}
 
