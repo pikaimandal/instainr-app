@@ -44,7 +44,7 @@ export default function BuyWithINRForm() {
       ) : (
         <div>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            The Buy with INR feature is coming soon! Sign up to be notified when it launches.
+            The Buy with INR feature is coming soon! Sign up to get early access.
           </p>
 
           <form onSubmit={handleSubmit}>
